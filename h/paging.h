@@ -44,20 +44,22 @@ typedef struct{
 
 typedef struct{
   int bs_status;			/* MAPPED or UNMAPPED		*/
-  int bs_pid;				/* process id using this slot   */
-  int bs_vpno;				/* starting virtual page number */
-  int bs_npages;			/* number of pages in the store */
+  int bs_pid[NPROC];				/* process id using this slot   */
+  int bs_vpno[NPROC];				/* starting virtual page number */
+  int bs_npages[NPROC];			/* number of pages in the store */
   int bs_sem;				/* semaphore mechanism ?	*/
+  int bs_private;     /* 0 = public, 1 = private */
+  int bs_refcnt;
 } bs_map_t;
 
 typedef struct{
   int fr_status;			/* MAPPED or UNMAPPED		*/
-  int fr_pid;				/* process id using this frame  */
-  int fr_vpno;				/* corresponding virtual page no*/
-  int fr_refcnt;			/* reference count		*/
+  int fr_pid[NPROC];	/* process id using this frame  */
+  int fr_vpno[NPROC];/* corresponding virtual page no*/
+  int fr_refcnt;			 /* reference count - how many pt or pd are using this frame */
   int fr_type;				/* FR_DIR, FR_TBL, FR_PAGE	*/
   int fr_dirty;
-}fr_map_t;
+} fr_map_t;
 
 extern bs_map_t bsm_tab[];
 extern fr_map_t frm_tab[];

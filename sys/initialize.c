@@ -209,8 +209,58 @@ sysinit()
 	}
 
 	rdytail = 1 + (rdyhead=newqueue());/* initialize ready list */
+	init_bsm();		/* initialize backing stores */	
 
+	// Initialize 4 global page tables to map 16MB of virtual memory to physical memory
+	pt_t *pte; // Pointer to a page table entry structure
+	for (i = 0; i < 4; i++) {
+		// Calulating the starting address of the i-th frame, beginning from frame0 (1024)
+		pte = (pt_t *)((i+FRAME0) * NBPG);
+		for( j = 0; j < 1024; j++) { // Insert 1024 entries for each page table
+			pte->pt_pres = 1; // Mark the page as present in memory for all processes
+			pte->pt_write = 1;
+			pte->pt_user = 0;
+			pte->pt_pwt = 0;
+			pte->pt_pcd = 0;
+			pte->pt_acc = 0;
+			pte->pt_dirty = 0;
+			pte->pt_mbz = 0;
+			pte->pt_global = 1;
+			pte->pt_avail = 0;
+			pte->pt_base = i * FRAME0 + j; // The base field holds the frame number (physical page frame). Computes the physical frame number for this page.
+			pte++; // Move to the next page table entry
+		}
+	}
 
+	// Page directory has 1024 entries
+	proctab[currpid].pdbr = (4+FRAME0) * NBPG;
+	pd_t *pde;
+	pde = (pd_t *)((4+FRAME0) * NBPG); // Allocate the fifth frame for NULL process
+	for (i = 0; i < 1024; i++) {
+		/* Global Page Tables */
+		if(i < 4){
+			pde->pd_pres = 1;
+			pde->pd_base = FRAME0 + i;
+		}
+		else{
+			pde->pd_pres = 0;
+			pde->pd_base = 0;
+		}
+		pde->pd_write = 1;
+		pde->pd_user = 0;
+		pde->pd_pwt = 0;
+		pde->pd_pcd = 0;
+		pde->pd_acc = 0;
+		pde->pd_mbz = 0;
+		pde->pd_fmb = 0;
+		pde->pd_global = 0;
+		pde->pd_avail = 0;
+		pde++;
+	}
+
+	set_evec(14,(u_long)pfintr);
+	write_cr3(proctab[NULLPROC].pdbr); // Set THE PDBR register
+	enable_paging();
 	return(OK);
 }
 

@@ -96,8 +96,34 @@ SYSCALL create(procaddr,ssize,priority,name,nargs,args)
 	*--saddr = 0;		/* %edi */
 	*pushsp = pptr->pesp = (unsigned long)saddr;
 
-	restore(ps);
+	
+	// Page directory size is 1024 entries
+	proctab[currpid].pdbr = (5+FRAME0) * NBPG;
+	pd_t *pde;
+	pde = (pd_t *)((5+FRAME0) * NBPG); 
+	for (i = 0; i < 1024; i++) {
+		/* Global Page Tables */
+		if(i < 4){
+			pde->pd_pres = 1;
+			pde->pd_base = FRAME0 + i;
+		}
+		else{
+			pde->pd_pres = 0;
+			pde->pd_base = 0;
+		}
+		pde->pd_write = 1;
+		pde->pd_user = 0;
+		pde->pd_pwt = 0;
+		pde->pd_pcd = 0;
+		pde->pd_acc = 0;
+		pde->pd_mbz = 0;
+		pde->pd_fmb = 0;
+		pde->pd_global = 0;
+		pde->pd_avail = 0;
+		pde++;
+	}
 
+	restore(ps);
 	return(pid);
 }
 
